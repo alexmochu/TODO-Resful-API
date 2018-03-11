@@ -1,14 +1,18 @@
 """Public Python Library"""
 import uuid
+import datetime
+import jwt
 
 """ Flask Extenstion Imports """
-from flask import Flask, jsonify, request, jsonify
+from flask import Flask, jsonify, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'thisissescret'
+app.config['DEBUG'] = True
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/chumo/Desktop/SQLite_Database/todo.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
@@ -88,6 +92,26 @@ def delete_user(public_id):
     db.session.commit()
 
     return jsonify({'message': 'The user has been deleted'})
+
+@app.route('/login')
+def login():
+    auth = request.authorization
+
+    if not auth or not auth.username or not auth.password:
+        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+    user = User.query.filter_by(name=auth.username).first()
+
+    if not user:
+        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+    if check_password_hash(user.password, auth.password):
+        token = jwt.encode({'public_id': user.public_id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)}, app.config['SECRET_KEY'])
+
+        return jsonify({'token' : token.decode('UTF-8')})
+    
+    return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
