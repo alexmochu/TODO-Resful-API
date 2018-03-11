@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'thisissescret'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/chumo/Desktop/SQLite_Database/todo.db'
-app.['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
 db = SQLAlchemy(app)
 
@@ -19,6 +19,17 @@ def hello_todo():
     """Home Route"""
     response = jsonify({"Welcome message":"Welcome to TODO RestfulAPI"})
     return response
+
+@app.route('/user', methods=['POST'])
+def create_user():
+    data = request.get_json()
+
+    hashed_password = generate_password_hash(data['password'], method='sha256')
+    new_user = User(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({'message': 'New user created'})
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
