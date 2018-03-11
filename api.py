@@ -207,14 +207,20 @@ def complete_todo(current_user, todo_id):
 
     todo.complete = True
     db.session.commit()
-    
+
     return jsonify({'message': 'Todo item has been completed!'})
 @app.route('/todo/<todo_id>', methods=['DELETE'])
 @token_required
-def delete_todos(current_id, todo_id):
-    return ''
+def delete_todos(current_user, todo_id):
+    todo = Todo.query.filter_by(id=todo_id, user_id=current_user.id).first()
 
+    if not todo:
+        return jsonify({'message': 'No todo found!'})
 
+    db.session.delete(todo)
+    db.session.commit()
+
+    return jsonify({'message': 'Todo item deleted!'})
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
