@@ -18,6 +18,28 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
 db = SQLAlchemy(app)
 
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+
+        if 'header-access-token' in request.headers:
+            token = request.headers['header-access-token']
+
+        if not token:
+            return jsonify({'message': 'Token is missing!'})
+
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'])
+            current_user = User.query.filter_by(public_id=data['public_id']).first()
+
+        except: 
+            return jsonify({'message': 'Token is inavlid!'})
+
+        return f(current_user, *args, **kwargs)
+
+    return decorated
+
 @app.route('/')
 def hello_todo():
     """Home Route"""
@@ -25,7 +47,11 @@ def hello_todo():
     return response
 
 @app.route('/user/<public_id>', methods=['GET'])
-def get_one_user(public_id):
+@token_required
+def get_one_user(current_user, public_id):
+
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
 
     user = User.query.filter_by(public_id=public_id).first()
 
@@ -41,7 +67,12 @@ def get_one_user(public_id):
     return jsonify({'user': user_data})
 
 @app.route('/user', methods=['GET'])
-def get_all_users():
+@token_required
+def get_all_users(current_user):
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
+
+
     users = User.query.all()
 
     output = []
@@ -57,7 +88,12 @@ def get_all_users():
     return jsonify({'users': output})
 
 @app.route('/user', methods=['POST'])
-def create_user():
+@token_required
+def create_user(current_user):
+
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
+
     data = request.get_json()
 
     hashed_password = generate_password_hash(data['password'], method='sha256')
@@ -68,7 +104,11 @@ def create_user():
     return jsonify({'message': 'New user created'})
 
 @app.route('/user/<public_id>', methods=['PUT'])
-def promote_user(public_id):
+@token_required
+def promote_user(current_user, public_id):
+
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
 
     user = User.query.filter_by(public_id=public_id).first()
 
@@ -81,7 +121,11 @@ def promote_user(public_id):
     return jsonify({'message': 'The user has been promoted'})
 
 @app.route('/user/<public_id>', methods=['DELETE'])
-def delete_user(public_id):
+@token_required
+def delete_user(current_user, public_id):
+
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
 
     user = User.query.filter_by(public_id=public_id).first()
 
