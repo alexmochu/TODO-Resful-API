@@ -20,6 +20,22 @@ def hello_todo():
     response = jsonify({"Welcome message":"Welcome to TODO RestfulAPI"})
     return response
 
+@app.route('/user', methods=['GET'])
+def get_all_users():
+    users = User.query.all()
+
+    output = []
+
+    for user in users:
+        user_data = {}
+        user_data['public_id'] = user.public_id
+        user_data['name'] = user.name
+        user_data['password'] = user.password
+        user_data['admin'] = user.admin
+        output.append(user_data)
+
+    return jsonify({'users': output})
+
 @app.route('/user', methods=['POST'])
 def create_user():
     data = request.get_json()
